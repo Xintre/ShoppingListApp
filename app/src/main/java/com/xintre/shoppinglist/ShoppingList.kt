@@ -53,41 +53,11 @@ data class ShoppingItem(
 )
 
 fun isNumericNotZero(toCheck: String): Boolean {
-    return (Regex("[^0]\\d*").matches(toCheck))
-//    return toCheck.all { char -> char.isDigit() }
+    // regex expression guarding the correctness of a number
+    // 01, 0002, 09876, 87980 - ok
+    // 0, -1, -098, 000 - incorrect
+    return (Regex("0*[1-9]\\d*").matches(toCheck))
 }
-
-//@Composable
-//fun Clickable(
-//    onClick: (() -> Unit)? = null,
-//    consumeDownOnStart: Boolean = false,
-//    children: @Composable() () -> Unit
-//)
-//Clickable(onClick = {
-//    Toast.makeText(context, "You just clicked a Clickable", Toast.LENGTH_LONG)
-//        .show()
-//}) {
-//    Text(text = "Hello!")
-//}
-
-//@Composable
-//fun DisableButton(
-//    onClick: () -> Unit,
-//    modifier: Modifier = Modifier,
-//    content: @Composable () -> Unit
-//) {
-//    val isEnabled = true
-//
-//    Button(
-//        onClick = onClick,
-//        enabled = isEnabled,
-//        modifier = modifier.then(
-//            if (isEnabled) Modifier else Modifier.alpha(0.5F)
-//        )
-//    ) {
-//        content()
-//    }
-//}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,7 +77,15 @@ fun ShoppingListApp(
     // quantity needs to be a string because the user enters a value - a string, and I display it
     // as a string - I don't execute any multiplications and so
     var itemQuantity by remember { mutableStateOf("") }
+    // variable responsible for enabling and disabling the button
     var isEnabled by remember { mutableStateOf(true) }
+    // value of isEnabled is changed (if the shoppinglistscreen is on - to true
+    // and otherwise to false) when currentdestination is changed
+    // we receive a callback (callback is executed asynchronously, the result of our callback
+    // is change in destination (screen))
+    navController.addOnDestinationChangedListener { _, destination, _ ->
+        isEnabled = destination.route == "shoppinglistscreen"
+    }
 
     val requestPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(), // it is ALWAYS the same
@@ -293,8 +271,8 @@ fun ShoppingListApp(
                             .padding(8.dp)
                     )
                     Button(
+                        enabled = isEnabled,
                         onClick = {
-                            isEnabled = false
                             if (locationUtils.hasLocationPermission(context)) {
                                 locationUtils.requestLocationUpdates(viewModel)
                                 navController.navigate("locationscreen") {
