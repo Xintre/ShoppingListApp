@@ -1,7 +1,5 @@
 package com.xintre.shoppinglist
 
-import android.widget.Button
-import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -49,16 +47,9 @@ fun LocationSelectionScreen(
         Button(onClick = {
             newLocation = LocationData(userLocation.value.latitude, userLocation.value.longitude)
             onLocationSelectedEvent(newLocation)
-            Toast.makeText(
-                getApplicationContext(),
-                "Maps loading...",
-                Toast.LENGTH_LONG
-            ).show()
+
         }) {
             Text("Set Location")
-            if (click) {
-                Button.isClickable = false
-            }
         }
     }
 }

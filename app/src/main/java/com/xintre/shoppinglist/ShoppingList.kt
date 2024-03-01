@@ -41,17 +41,53 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
-import androidx.core.text.isDigitsOnly
 import androidx.navigation.NavController
 import com.xintre.locatotionapp.LocationUtils
 
 data class ShoppingItem(
     val id: Int,
     var name: String,
-    var quantity: Int,
+    var quantity: String,
     var isEditing: Boolean = false,
     var address: String = ""
 )
+
+fun isNumericNotZero(toCheck: String): Boolean {
+    return (Regex("[^0]\\d*").matches(toCheck))
+//    return toCheck.all { char -> char.isDigit() }
+}
+
+//@Composable
+//fun Clickable(
+//    onClick: (() -> Unit)? = null,
+//    consumeDownOnStart: Boolean = false,
+//    children: @Composable() () -> Unit
+//)
+//Clickable(onClick = {
+//    Toast.makeText(context, "You just clicked a Clickable", Toast.LENGTH_LONG)
+//        .show()
+//}) {
+//    Text(text = "Hello!")
+//}
+
+//@Composable
+//fun DisableButton(
+//    onClick: () -> Unit,
+//    modifier: Modifier = Modifier,
+//    content: @Composable () -> Unit
+//) {
+//    val isEnabled = true
+//
+//    Button(
+//        onClick = onClick,
+//        enabled = isEnabled,
+//        modifier = modifier.then(
+//            if (isEnabled) Modifier else Modifier.alpha(0.5F)
+//        )
+//    ) {
+//        content()
+//    }
+//}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,6 +107,7 @@ fun ShoppingListApp(
     // quantity needs to be a string because the user enters a value - a string, and I display it
     // as a string - I don't execute any multiplications and so
     var itemQuantity by remember { mutableStateOf("") }
+    var isEnabled by remember { mutableStateOf(true) }
 
     val requestPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(), // it is ALWAYS the same
@@ -179,20 +216,38 @@ fun ShoppingListApp(
                         onClick = {
                             // if the field IS NOT EMPTY - I create a new object
                             // if it IS EMPTY - do nothing
+                            // checking if the name of the product is not empty and if the quantity
+                            // is only numbers
                             if (itemName.isNotBlank()) {
-                                val newItem = ShoppingItem(
-                                    id = sItems.size + 1,
-                                    name = itemName,
-                                    quantity = itemQuantity.toInt()
-                                )
-                                // adding an item to the list
-                                // the list = the list and a new item
-                                sItems = sItems + newItem
-                                // after adding an item the alert box should be hidden hence:
-                                showDialog = false
-                                // I clear the box so the name doesn't overite
-                                itemName = ""
-                                itemQuantity = ""
+                                if (isNumericNotZero(itemQuantity)) {
+                                    val newItem = ShoppingItem(
+                                        id = sItems.size + 1,
+                                        name = itemName,
+                                        quantity = itemQuantity
+                                    )
+                                    // adding an item to the list
+                                    // the list = the list and a new item
+                                    sItems = sItems + newItem
+                                    // after adding an item the alert box should be hidden hence:
+                                    showDialog = false
+                                    // I clear the box so the name doesn't overite
+                                    itemName = ""
+                                    itemQuantity = ""
+                                } else {
+                                    // quantity is not only numbers - do nothing and make a Toast
+                                    // with a request for a correct number
+                                    Toast.makeText(
+                                        context,
+                                        "Please enter an integer that doesn't start with a zero",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            } else {
+                                Toast.makeText(
+                                    context,
+                                    "Please enter the item name",
+                                    Toast.LENGTH_LONG
+                                ).show()
                             }
                         },
                         //modifier = Modifier.background(Color(0XFF4A235A))
@@ -223,33 +278,38 @@ fun ShoppingListApp(
                     Text("Please enter the item quantity:", modifier = Modifier.padding(8.dp))
                     OutlinedTextField(
                         value = itemQuantity,
-                        //onValueChange = { itemQuantity = it },
-                        // tu zmienic?
-                        try{  }
-                        catch(!itemQuantity.isDigitsOnly()) {
-                            Toast.makeText(context, "Please enter a number", Toast.LENGTH_LONG),
-                            onValueChange = { itemQuantity = it }
-                        }
+                        onValueChange = { itemQuantity = it },
                         singleLine = true,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(8.dp)
                     )
-                    Button(onClick = {
-                        if (locationUtils.hasLocationPermission(context)) {
-                            locationUtils.requestLocationUpdates(viewModel)
-                            navController.navigate("locationscreen") {
-                                this.launchSingleTop
-                            }
-                        } else {
-                            requestPermissionLauncher.launch(
-                                arrayOf(
-                                    Manifest.permission.ACCESS_FINE_LOCATION,
-                                    Manifest.permission.ACCESS_COARSE_LOCATION
+                    Text("Picked address:", modifier = Modifier.padding(8.dp))
+                    OutlinedTextField(
+                        value = address,
+                        onValueChange = { itemQuantity = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                    )
+                    Button(
+                        onClick = {
+                            isEnabled = false
+                            if (locationUtils.hasLocationPermission(context)) {
+                                locationUtils.requestLocationUpdates(viewModel)
+                                navController.navigate("locationscreen") {
+                                    this.launchSingleTop
+                                }
+                            } else {
+                                requestPermissionLauncher.launch(
+                                    arrayOf(
+                                        Manifest.permission.ACCESS_FINE_LOCATION,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION
+                                    )
                                 )
-                            )
-                        }
-                    }) {
+                            }
+                        },
+                    ) {
                         Text("address")
                     }
                 }
@@ -259,9 +319,9 @@ fun ShoppingListApp(
 }
 
 @Composable
-fun ShoppingItemEditor(item: ShoppingItem, onEditComplete: (String, Int) -> Unit) {
+fun ShoppingItemEditor(item: ShoppingItem, onEditComplete: (String, String) -> Unit) {
     var editedName by remember { mutableStateOf(item.name) }
-    var editedQuantity by remember { mutableStateOf(item.quantity.toString()) }
+    var editedQuantity by remember { mutableStateOf(item.quantity) }
     var isEditing by remember { mutableStateOf(item.isEditing) }
     Row(
         modifier = Modifier
@@ -292,7 +352,7 @@ fun ShoppingItemEditor(item: ShoppingItem, onEditComplete: (String, Int) -> Unit
         Button(
             onClick = {
                 isEditing = false
-                onEditComplete(editedName, editedQuantity.toIntOrNull() ?: 1)
+                onEditComplete(editedName, editedQuantity)
             }
         ) {
             Text("Save")
@@ -347,7 +407,6 @@ fun ShoppingListItem(
                 Icon(imageVector = Icons.Default.LocationOn, contentDescription = null)
                 Text(text = item.address)
             }
-
         }
 
         Row(modifier = Modifier.padding(8.dp)) {
@@ -366,7 +425,5 @@ fun ShoppingListItem(
                 )
             }
         }
-
     }
-
 }
